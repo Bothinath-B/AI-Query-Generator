@@ -34,6 +34,8 @@ def generate_sql_endpoint(payload: dict):
 
     query = generate_sql(prompt, schema)
     safe_sql(query)
+    query = query.replace("\n    ","")
+    query = query.replace("\n","")
     return {"query": query}
 
 @app.post("/run-sql")
@@ -41,17 +43,36 @@ def run_sql(payload: dict):
     query = payload["query"]
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute(query)
-    rows = cursor.fetchall()
+    results = []
 
-    columns = [desc[0] for desc in cursor.description]
-    result = [dict(zip(columns, row)) for row in rows]
+    # Split multiple statements by semicolon
+    statements = [stmt.strip() for stmt in query.split(";") if stmt.strip()]
 
+    for stmt in statements:
+        try:
+            cursor.execute(stmt)
+            if stmt.lower().startswith("select"):
+                columns = [desc[0] for desc in cursor.description]
+                rows = cursor.fetchall()
+                results.append({"statement": stmt, "rows": [dict(zip(columns, row)) for row in rows]})
+            else:
+                results.append({"statement": stmt, "status": "executed"})
+        except Exception as e:
+            results.append({"statement": stmt, "error": str(e)})
+
+    conn.commit()
     conn.close()
-    return {"result": result}
+    return {"result": results}
+
 
 @app.post("/explain")
 def explain(payload: dict):
     query = payload["query"]
-    explanation = explain_sql(query)
-    return {"explanation": explanation}
+
+    explanation = explain_sql(query)  # LLM now returns a JSON array string
+    # Convert string to Python list for proper JSON response
+    import json
+    explanation_list = json.loads(explanation)
+
+    return {"explanation": explanation_list}
+
