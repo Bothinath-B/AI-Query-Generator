@@ -1,0 +1,12 @@
+# created by virtualenv automatically
+.venv/
+.env
+.idea/
+*.iml
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.DS_Store
+node_modules
+package-lock.json
