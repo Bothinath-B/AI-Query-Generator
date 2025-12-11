@@ -13,21 +13,38 @@ def generate_sql(prompt, schema):
     """
 
     response = client.chat.completions.create(
-        model="mixtral-8x7b-32768",
+        model="openai/gpt-oss-120b",
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt}
         ]
     )
 
-    return response.choices[0].message["content"].strip()
+    # return response.choices[0].message["content"].strip()
+    return response.choices[0].message.content.strip()
+
 
 def explain_sql(query):
+    system_prompt = """
+    You are a SQL explainer.
+    Explain the following SQL query in simple English.
+    STRICT RULES:
+    1. Do not use markdown, asterisks, or quotes.
+    2. Do not include code blocks or formatting.
+    3. Return explanation as plain text, one sentence per point.
+    4. Each point should be a separate item in a JSON array.
+    """
+
     response = client.chat.completions.create(
-        model="mixtral-8x7b-32768",
+        model="openai/gpt-oss-120b",
         messages=[
-            {"role": "system", "content": "Explain the following SQL query in simple English."},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": query}
         ]
     )
-    return response.choices[0].message["content"]
+
+    # Parse JSON directly from LLM output
+    explanation = response.choices[0].message.content.strip()
+
+    return explanation  # Already in JSON-friendly array format
+
